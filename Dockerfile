@@ -36,11 +36,11 @@ WORKDIR /app
 COPY worker/.env .
 
 # Set environment variables
-ENV DB_SERVER=db \
-    DB_USERNAME=postgres \
-    DB_PASSWORD=postgres \
-    REDIS_HOSTNAME=redis \
-    REDIS_HOST=redis
+ENV DB_SERVER=${DB_SERVER} \
+    DB_USERNAME=${DB_USERNAME} \
+    DB_PASSWORD=${DB_PASSWORD} \
+    REDIS_HOSTNAME=${REDIS_HOSTNAME} \
+    REDIS_HOST=${REDIS_HOST}
 
 # Copy the published application from the build stage
 COPY --from=build /app .

@@ -26,6 +26,7 @@ namespace Worker
 
                 // Updated PostgreSQL connection string with database name and SSL mode disabled
                 string pgsqlConnectionString = $"Server={dbServer};Database={dbName};Username={dbUsername};Password={dbPassword};SslMode=Disable;";
+                Console.WriteLine($"Connection String: {pgsqlConnectionString}");
                 var pgsql = OpenDbConnection(pgsqlConnectionString);
                 var redisConn = OpenRedisConnection(redisHostname, redisPassword);
                 var redis = redisConn.GetDatabase();

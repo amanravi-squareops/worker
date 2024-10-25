@@ -27,6 +27,7 @@ namespace Worker
                 // Updated PostgreSQL connection string with database name and SSL mode disabled
                 string pgsqlConnectionString = $"Server={dbServer};Database={dbName};Username={dbUsername};Password={dbPassword};SslMode=Disable;";
                 Console.WriteLine($"Connection String: {pgsqlConnectionString}");
+                
                 var pgsql = OpenDbConnection(pgsqlConnectionString);
                 var redisConn = OpenRedisConnection(redisHostname, redisPassword);
                 var redis = redisConn.GetDatabase();
@@ -114,32 +115,46 @@ namespace Worker
 
         private static ConnectionMultiplexer OpenRedisConnection(string hostname, string password)
         {
-            var ipAddress = GetIp(hostname);
-            Console.WriteLine($"Found redis at {ipAddress}");
-
+            Console.WriteLine($"Connecting to Redis at {hostname}");
             while (true)
             {
                 try
                 {
-                    Console.Error.WriteLine("Connecting to redis");
-                    var config = ConfigurationOptions.Parse(ipAddress);
-                    config.Password = password;
+                    var config = new ConfigurationOptions
+                    {
+                        EndPoints = { hostname },
+                        Password = password,
+                        AbortOnConnectFail = false // Optional for retry resilience
+                    };
                     return ConnectionMultiplexer.Connect(config);
                 }
-                catch (RedisConnectionException)
+                catch (RedisConnectionException ex)
                 {
-                    Console.Error.WriteLine("Waiting for redis");
+                    Console.Error.WriteLine($"Waiting for redis: {ex.Message}");
                     Thread.Sleep(1000);
                 }
             }
         }
 
         private static string GetIp(string hostname)
-            => Dns.GetHostEntryAsync(hostname)
-                .Result
-                .AddressList
-                .First(a => a.AddressFamily == AddressFamily.InterNetwork)
-                .ToString();
+        {
+            while (true)
+            {
+                try
+                {
+                    return Dns.GetHostEntryAsync(hostname)
+                              .Result
+                              .AddressList
+                              .First(a => a.AddressFamily == AddressFamily.InterNetwork)
+                              .ToString();
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"DNS resolution failed for {hostname}: {ex.Message}");
+                    Thread.Sleep(1000); // Retry after a short delay
+                }
+            }
+        }
 
         private static void UpdateVote(NpgsqlConnection connection, string voterId, string vote)
         {
